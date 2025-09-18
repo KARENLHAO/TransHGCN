@@ -36,7 +36,7 @@ class GraphConvolution(nn.Module):
 
         if self.norm_flag:
             # 对节点维度做BatchNorm，一般来说节点数较多可采用 BatchNorm1d
-            self.bn = nn.BatchNorm1d(n_node)#则对节点维度应用BatchNorm1d归一化操作
+            self.bn = nn.BatchNorm1d(64)#则对节点维度应用BatchNorm1d归一化操作
             
     def forward(self, inputs, adj):
         """

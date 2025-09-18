@@ -1,9 +1,8 @@
 import numpy as np
 import pandas as pd
 from utils import load_data
-import scipy.io as sio
 import scipy.sparse as sp
-import random
+
 
 
 
@@ -27,7 +26,7 @@ def adj_to_bias(adj, sizes, nhood = 1):#输入参数包括邻接矩阵 adj、图
 
 
 def load_data1():
-    exp_file = 'Data/hESC/TFs+1000/BL--ExpressionData.csv'  # .../
+    exp_file = 'Data/mESC/TFs+1000/BL--ExpressionData.csv'  # .../
 
 
     data_input = pd.read_csv(exp_file, index_col=0)
@@ -36,10 +35,12 @@ def load_data1():
     feature = loader.exp_data()
     geneNum = feature.shape[0]
 
+    
 
-    train_file = 'Data/Train_validation_test/hESC 1000/Train_set.csv'  # .../Demo/
-    test_file = 'Data/Train_validation_test/hESC 1000/Test_set.csv'
-    val_file = 'Data/Train_validation_test/hESC 1000/Validation_set.csv'
+
+    train_file = 'Data/Train_validation_test/mESC 1000/Train_set.csv'  # .../Demo/
+    test_file = 'Data/Train_validation_test/mESC 1000/Test_set.csv'
+    val_file = 'Data/Train_validation_test/mESC 1000/Validation_set.csv'
     train_data = pd.read_csv(train_file, index_col=0).values
     validation_data = pd.read_csv(val_file, index_col=0).values
     test_data = pd.read_csv(test_file, index_col=0).values
@@ -81,7 +82,24 @@ def load_data1():
     test_mask = np.array(logits_test[:, 0], dtype=np.bool_).reshape([-1, 1])
     validation_mask = np.array(logits_validation[:, 0], dtype=np.bool_).reshape([-1, 1])
 
-    return geneName, feature, logits_train, logits_test, logits_validation, train_mask, test_mask, validation_mask, interaction, neg_logits_train, neg_logits_test, neg_logits_validation, train_data, validation_data, test_data
+    return (
+        geneName,
+        feature,
+        
+        logits_train,
+        logits_test,
+        logits_validation,
+        train_mask,
+        test_mask,
+        validation_mask,
+        interaction,
+        neg_logits_train,
+        neg_logits_test,
+        neg_logits_validation,
+        train_data,
+        validation_data,
+        test_data,
+    )
 
 def preprocess_graph(adj):
     adj = sp.coo_matrix(adj)#将输入的邻接矩阵 adj 转换为稀疏 COO 格式。

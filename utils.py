@@ -1,8 +1,11 @@
 from sklearn.preprocessing import StandardScaler
 import numpy as np
 import torch
-import torch.nn as nn
 from sklearn.metrics import roc_auc_score,average_precision_score
+
+
+
+
 class load_data():
     def __init__(self, data, normalize=True):#data（数据）和 normalize 布尔值个布尔类型的参数，用于指示是否对数据进行归一化处理
         self.data = data
@@ -24,6 +27,7 @@ class load_data():
         data_feature = data_feature.astype(np.float32)#将数据类型转化为float32类型
 
         return data_feature
+
 
 
 def normalize(expression):
@@ -91,3 +95,5 @@ def ROC(outs, labels, test_arr, label_neg):
     test_labels1 = np.vstack((test_labels, temp))
     test_labels1 = np.array(test_labels1, dtype=np.bool).reshape([-1, 1])#将 test_labels1 转换为布尔类型，并将其重塑为一列的数组。具体作用如下：
     return test_labels1, scores
+
+

@@ -1,141 +1,186 @@
-# main.py (PyTorch版，支持GPU)
 import torch
 import numpy as np
 import pandas as pd
 import time
 import matplotlib.pyplot as plt
+import argparse
 from sklearn.metrics import precision_recall_curve, roc_curve, auc
 
-from inits import load_data1, preprocess_graph  # 数据加载、预处理函数保持不变
-from model.Transorfomer import TransorfomerModel  # 已转换为 PyTorch 的模型
-from utils import masked_accuracy
+from inits import load_data1, preprocess_graph
+from model.Transorfomer import TransorfomerModel
+from hypergraph_construction import construct_H_with_KNN, generate_G_from_H
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 
-epochs =700
+
+epochs = 700
 batch_size = 64
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--n_hid", type=int, default=128, help="dimension of hidden layer")
+parser.add_argument("--drop_out", type=float, default=0.1, help="dropout rate")
+parser.add_argument("--edge_type", type=str, default="euclid", help="euclid or pearson")
+parser.add_argument( "--is_probH", type=bool, default=False, help="prob edge True or False")
+parser.add_argument("--m_prob", type=float, default=1.0, help="m_prob")
+parser.add_argument("--K_neigs", type=int, default=5, help="K_neigs")
+args = parser.parse_args()
+
 
 def evaluate(rel_test_label, pre_test_label):
     """
     计算 ROC 和 PR 曲线下面积。
     rel_test_label: numpy 数组，形状 [n_sample, 3]，其中前两列为索引，第三列为真实标签
-    pre_test_label: numpy 数组，形状 [num_nodes, num_nodes]，预测的分数矩阵
-    rel_test_label用于提供测试数据的真实标签信息,并与预测分数矩阵 pre_test_label 进行对比，以计算 ROC 和 PR 曲线下面积。
+    pre_test_label: numpy 数组，形状 [num_nodes, num_nodes]
     """
-    temp_pre = []
-    for i in range(rel_test_label.shape[0]):
-        #提取当前行的前两列作为索引m和n。
-        m = int(rel_test_label[i, 0])
-        n = int(rel_test_label[i, 1])
-        temp_pre.append([m, n, pre_test_label[m, n]])
-    temp_pre = np.array(temp_pre)#并从 pre_test_label 中获取对应的预测分数，构造新的数组 temp_pre。
+    y_true = rel_test_label[:, 2]
+    idx = rel_test_label[:, :2].astype(int)
+    y_score = pre_test_label[idx[:, 0], idx[:, 1]]
 
-    prec, rec, _ = precision_recall_curve(rel_test_label[:, 2], temp_pre[:, 2])#计算 PR 曲线的精度和召回率，并计算 PR 曲线下面积 (AUPR)。
-    aupr_val = auc(rec, prec)
+    fpr, tpr, _ = roc_curve(y_true, y_score)
+    precision, recall, _ = precision_recall_curve(y_true, y_score)
 
-    fpr, tpr, _ = roc_curve(rel_test_label[:, 2], temp_pre[:, 2])#计算 ROC 曲线的假阳性率和真阳性率，并计算 ROC 曲线下面积 (AUC)。
-    auc_val = auc(fpr, tpr)
+    return auc(fpr, tpr), auc(recall, precision), fpr, tpr, recall, precision
 
-    return auc_val, aupr_val, fpr, tpr, rec, prec
 
 def main(device):
     # -------------------- 数据加载与预处理 --------------------
-    # load_data1 返回：geneName, feature, logits_train, logits_test, logits_validation,
-    # train_mask, test_mask, validation_mask, interaction, neg_logits_train, neg_logits_test, neg_logits_validation, train_data, validation_data, test_data
-    
-    #geneName: 节点名称
-    #feature: 节点特征
-    #logits_train: 训练集标签 logits 预测分数
-    #logits_test: 测试集标签
-    #logits_validation: 验证集标签
-    #train_mask: 训练集标签 mask筛选特定的数据子集 分别用于标记训练集、测试集和验证集中的有效样本。作用是通过布尔值（True/False）选择性地应用操作到指定的样本上。
-    #test_mask: 测试集标签
-    #validation_mask: 验证集标签
-    #interaction: 邻接矩阵
-    #neg_logits_train: 训练集负样本标签 用于在训练阶段计算损失时区分正负样本。
-    #neg_logits_test: 测试集负样本标签  用于在测试阶段计算损失时区分正负样本。
-  
-    (geneName, feature, logits_train, logits_test, logits_validation,
-     train_mask, test_mask, validation_mask, interaction,
-     neg_logits_train, neg_logits_test, neg_logits_validation,
-     train_data, validation_data, test_data) = load_data1()
+    (
+        geneName,
+        feature,
+        
+        logits_train,
+        logits_test,
+        logits_validation,
+        train_mask,
+        test_mask,
+        validation_mask,
+        interaction,
+        neg_logits_train,
+        neg_logits_test,
+        neg_logits_validation,
+        train_data,
+        validation_data,
+        test_data,
+    ) = load_data1()
 
-    # 预处理邻接矩阵，得到稀疏矩阵 tuple（coords, values, shape）
+    # 邻接 -> 稀疏张量 adj
     bias_tuple = preprocess_graph(interaction)
     coords, values, shape = bias_tuple
-    # 将邻接矩阵转换为 PyTorch 稀疏 tensor
     indices = torch.LongTensor(coords.T).to(device)
     values = torch.FloatTensor(values).to(device)
-    adj = torch.sparse_coo_tensor(indices, values, torch.Size(shape)).to(device)
+    adj = (
+        torch.sparse_coo_tensor(indices, values, torch.Size(shape))
+        .coalesce()
+        .to(device)
+    )
 
-    # 将 numpy 数据转换为 torch.Tensor，并迁移到 device 上
+    # === 超图 G ===
+    # H = build_H_from_knn(exp=pd.DataFrame(feature), k=5, self_loop=True)
+    H = construct_H_with_KNN(
+        X=feature,
+        K_neigs=args.K_neigs,
+        is_probH=args.is_probH,
+        m_prob=args.m_prob,
+        edge_type=args.edge_type,
+    )
+    G = generate_G_from_H(H)
+    
+    
+
+    # numpy -> torch
+    G = torch.FloatTensor(G).to(device)
     feature = torch.FloatTensor(feature).to(device)
     logits_train = torch.FloatTensor(logits_train).to(device)
     logits_test = torch.FloatTensor(logits_test).to(device)
     logits_validation = torch.FloatTensor(logits_validation).to(device)
-    # mask 转为 BoolTensor（后续在 loss 计算中转换为 float）
+
     train_mask = torch.BoolTensor(train_mask).to(device)
     test_mask = torch.BoolTensor(test_mask).to(device)
     validation_mask = torch.BoolTensor(validation_mask).to(device)
+
     neg_logits_train = torch.FloatTensor(neg_logits_train).to(device)
     neg_logits_test = torch.FloatTensor(neg_logits_test).to(device)
     neg_logits_validation = torch.FloatTensor(neg_logits_validation).to(device)
 
     # -------------------- 模型构建 --------------------
-    # 这里 TransorfomerModel 的构造函数中接收的 exp 参数为 feature
-    model = TransorfomerModel(feature, do_train=False).to(device)
-    model.train()  # 训练模式
+    model = TransorfomerModel(G, do_train=True).to(device)
+    model.train()
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)  # weight_decay=0.0005 可根据需求添加
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
 
     # -------------------- 训练与验证 --------------------
     for epoch in range(epochs):
         t_start = time.time()
         optimizer.zero_grad()
 
-        # 前向传播（训练阶段）
-        logits = model(adj)  # 输出形状为 [entry_size, 1]
+        # === 前向：现在返回 logits 和对比三元组 ===
+        logits, triplet = model(adj, G)
 
-        # 计算训练损失（masked_accuracy作为损失函数，跟原代码保持一致）
-        loss = masked_accuracy(logits, logits_train, train_mask, neg_logits_train)
+        # === 融合损失：重构(base) + 对比 ===
+        loss, base_loss = model.loss_func(
+            logits,
+            lbl_in=logits_train,
+            msk_in=train_mask.float(),
+            neg_msk=neg_logits_train,
+            triplet=triplet,
+            lambda_contrast=0.2,
+        )
         loss.backward()
         optimizer.step()
+        
 
-        train_loss_avg = loss.item()  # 示例中仅计算一次
+       
+        # ma = masked_accuracy(logits, logits_train, train_mask, neg_logits_train)
 
-        # 验证阶段
+        # 验证
         model.eval()
         with torch.no_grad():
-            val_logits = model(adj)#获取验证集的预测结果
-            val_loss = masked_accuracy(val_logits, logits_validation, validation_mask, neg_logits_validation)
-            # 将验证输出 reshape 成 [num_nodes, num_nodes] val_score，以便后续评估。
-            val_score = val_logits.view(feature.shape[0], feature.shape[0]).cpu().numpy()
-        # 使用 evaluate 函数计算 AUC 和 AUPR
+            val_logits, _ = model(adj, G)
+            val_loss, _ = model.loss_func(
+                val_logits,
+                lbl_in=logits_validation,
+                msk_in=validation_mask.float(),
+                neg_msk=neg_logits_validation,
+                triplet=None,
+            )
+            val_score = (
+                val_logits.view(feature.shape[0], feature.shape[0]).cpu().numpy()
+            )
+
         auc_val, aupr_val, _, _, _, _ = evaluate(validation_data, val_score)
         t_elapsed = time.time() - t_start
-        print("Epoch: {:04d} | Train Loss: {:.5f} | Val Loss: {:.5f} | AUC: {:.5f} | AUPR: {:.5f} | Time: {:.5f}s".format(
-            epoch, train_loss_avg, val_loss.item(), auc_val, aupr_val, t_elapsed))
+        print(
+            f"Epoch: {epoch:04d} | Train Loss: {loss.item():.5f} "
+            f"(base {base_loss.item():.5f}) | Val Loss: {val_loss.item():.5f} "
+            f"| AUC: {auc_val:.5f} | AUPR: {aupr_val:.5f} | Time: {t_elapsed:.5f}s"
+        )
         model.train()
 
     print("Finish training.")
 
-    # -------------------- 测试阶段 --------------------
+    # -------------------- 测试 --------------------
     model.eval()
     with torch.no_grad():
-        test_logits = model(adj)
-        test_loss = masked_accuracy(test_logits, logits_test, test_mask, neg_logits_test)
+        test_logits, _ = model(adj, G)
+        # 如需保持和旧代码一致的指标，也可用 masked_accuracy：
+        test_loss, _ = model.loss_func(
+            test_logits,
+            lbl_in=logits_test,
+            msk_in=test_mask.float(),
+            neg_msk=neg_logits_test,
+            triplet=None,
+        )
         test_score = test_logits.view(feature.shape[0], feature.shape[0]).cpu().numpy()
-    print('Test Loss: {:.5f}'.format(test_loss.item()))
+    print("Test Loss: {:.5f}".format(test_loss.item()))
 
-    # 返回 geneName, 预测矩阵, 以及 test_data（关系数据，用于后续评价）
     return geneName, test_score, test_data
 
-if __name__ == '__main__':
-    # 设置随机种子，确保结果可复现
+
+if __name__ == "__main__":
     seed = 123
     np.random.seed(seed)
     torch.manual_seed(seed)
 
-    # 设置设备：如果有 GPU 则使用 GPU
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Using device:", device)
 
     T = 1
@@ -147,12 +192,13 @@ if __name__ == '__main__':
             geneName, pre_test_label, rel_test_label = main(device)
             print("Run time: {:.4f}s".format(time.time() - t_start))
 
-            # 计算评价指标
-            auc_val, aupr_val, fpr, tpr, rec, prec = evaluate(rel_test_label, pre_test_label)
+            auc_val, aupr_val, fpr, tpr, rec, prec = evaluate(
+                rel_test_label, pre_test_label
+            )
             aupr_vec.append(aupr_val)
             print("auc: {:.6f}, aupr: {:.6f}".format(auc_val, aupr_val))
 
-            # 可视化 ROC 曲线
+            # 画图（可选）
             plt.figure()
             plt.plot(fpr, tpr, label="ROC (AUC = {:.4f})".format(auc_val))
             plt.xlabel("False Positive Rate")
@@ -161,7 +207,6 @@ if __name__ == '__main__':
             plt.legend()
             plt.show()
 
-            # 可视化 Precision-Recall 曲线
             plt.figure()
             plt.plot(rec, prec, label="PR (AUPR = {:.4f})".format(aupr_val))
             plt.xlabel("Recall")
@@ -169,3 +214,20 @@ if __name__ == '__main__':
             plt.title("Precision-Recall Curve")
             plt.legend()
             plt.show()
+
+
+y_true = rel_test_label[:, 2]  # shape [n_samples]
+idx = rel_test_label[:, :2].astype(int)
+
+# 预测分数转成 0/1 标签，阈值默认 0.5
+y_score = pre_test_label[idx[:, 0], idx[:, 1]]
+y_pred = (y_score >= 0.5).astype(int)
+
+# 计算混淆矩阵
+cm = confusion_matrix(y_true, y_pred)
+
+# 可视化
+disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=[0, 1])
+disp.plot(cmap=plt.cm.Blues)
+plt.title("Confusion Matrix")
+plt.show()

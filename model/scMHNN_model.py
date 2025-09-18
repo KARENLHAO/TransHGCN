@@ -2,11 +2,6 @@ import torch
 from torch import nn
 from .layer import HGNN_conv
 import torch.nn.functional as F
-import random
-from scipy.sparse import coo_matrix
-import numpy as np
-
-
 
 
 # scMHNN for stage1
@@ -56,48 +51,48 @@ class HGNN_supervised(nn.Module):
         return x
 
 
-def generate_node_pair_sets(H_rna, H_adt, H_atac):
+# def generate_node_pair_sets(H_rna, H_adt, H_atac):
         
 
-    np.fill_diagonal(H_rna, 0)
-    np.fill_diagonal(H_adt, 0)
-    np.fill_diagonal(H_atac, 0)
+#     np.fill_diagonal(H_rna, 0)
+#     np.fill_diagonal(H_adt, 0)
+#     np.fill_diagonal(H_atac, 0)
 
 
-    H_rna = np.where(H_rna,1,0)
-    H_adt = np.where(H_adt,1,0)
-    H_atac = np.where(H_atac,1,0)
-    H_all = H_rna + H_adt + H_atac
-    H_tri = np.where(H_all==3,1,0)
-    H_bi = np.where(H_all==2,1,0)
-    H_single = np.where(H_all==1,1,0)
-    H_none = np.where(H_all==0,1,0)
-
-
-
-    return H_tri, H_bi, H_single, H_none
+#     H_rna = np.where(H_rna,1,0)
+#     H_adt = np.where(H_adt,1,0)
+#     H_atac = np.where(H_atac,1,0)
+#     H_all = H_rna + H_adt + H_atac
+#     H_tri = np.where(H_all==3,1,0)
+#     H_bi = np.where(H_all==2,1,0)
+#     H_single = np.where(H_all==1,1,0)
+#     H_none = np.where(H_all==0,1,0)
 
 
 
-
-def neighbor_sampling(H,positive_neighbor_num,p):
-    # Given a dense incidence matrix and a sample num (positive_neighbor_num*p)
-    # Return a sampled coordinate array
-    row_coor, col_coor = np.nonzero(H)
-    coor = np.vstack((row_coor,col_coor))
-    indices = list(range(coor.shape[1]))
-    random.shuffle(indices)
-    num_subset = int(positive_neighbor_num*p)
-    idx_subset = indices[:num_subset]
-    coor_sampled = coor[:,idx_subset]
-
-    return coor_sampled
+#     return H_tri, H_bi, H_single, H_none
 
 
-def neighbor_concat(coor_sampled_tri,coor_sampled_bi,coor_sampled_single,N):
-    # Given three sets of sample neighbors from three types
-    # Return a dense indicator matrix
+
+
+# def neighbor_sampling(H,positive_neighbor_num,p):
+#     # Given a dense incidence matrix and a sample num (positive_neighbor_num*p)
+#     # Return a sampled coordinate array
+#     row_coor, col_coor = np.nonzero(H)
+#     coor = np.vstack((row_coor,col_coor))
+#     indices = list(range(coor.shape[1]))
+#     random.shuffle(indices)
+#     num_subset = int(positive_neighbor_num*p)
+#     idx_subset = indices[:num_subset]
+#     coor_sampled = coor[:,idx_subset]
+
+#     return coor_sampled
+
+
+# def neighbor_concat(coor_sampled_tri,coor_sampled_bi,coor_sampled_single,N):
+#     # Given three sets of sample neighbors from three types
+#     # Return a dense indicator matrix
     
-    coor = np.hstack((coor_sampled_tri,coor_sampled_bi,coor_sampled_single))
-    data = np.ones(coor.shape[1])
-    return coo_matrix((data,(coor[0,:],coor[1,:])),shape=(N,N)).toarray()
+#     coor = np.hstack((coor_sampled_tri,coor_sampled_bi,coor_sampled_single))
+#     data = np.ones(coor.shape[1])
+#     return coo_matrix((data,(coor[0,:],coor[1,:])),shape=(N,N)).toarray()
