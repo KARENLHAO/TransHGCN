@@ -6,6 +6,7 @@ from model.gcn import GraphConvolution
 from .scMHNN_model import HGNN_unsupervised
 import numpy as np
 
+
 class MultiHeadAttention(nn.Module):
     def __init__(self, input_dim, n_heads, ouput_dim=None):
         super(MultiHeadAttention, self).__init__()
@@ -40,6 +41,7 @@ class MultiHeadAttention(nn.Module):
         output = self.fc(context)
         return output
 
+
 class EncoderLayer(nn.Module):
     def __init__(self, input_dim, n_heads):
         super(EncoderLayer, self).__init__()
@@ -59,7 +61,6 @@ class EncoderLayer(nn.Module):
         return output
 
 
-
 class TransorfomerModel(nn.Module):
     def __init__(self, exp, do_train=False):
         """
@@ -76,9 +77,12 @@ class TransorfomerModel(nn.Module):
         self.scMHNN_model = HGNN_unsupervised(
             in_ch=self.num_cells, n_hid=128, dropout=0.1
         )
-        self.fuse = nn.Linear(128 + 128, 128)   # 融合 HGNN + Transformer
+        
         self.proj = nn.Linear(self.num_cells, 128)  # 把原始特征压到128维
-        self.tau = 0.1  # 对比损失的温度参数
+
+        self.fuse = nn.Sequential(
+            nn.Linear(128 + 128, 128), nn.ReLU(inplace=True)
+        )   # 融合 HGNN + Transformer
 
         self.adapt_for_gcn = nn.Linear(128, self.num_cells)
 
@@ -92,7 +96,7 @@ class TransorfomerModel(nn.Module):
 
 
         self.fes_encoder = EncoderLayer(128, 2)
-
+        self.tau = 0.1  # 对比损失的温度参数
 
     def forward(self, adj, G):
         # 1) 归一化 + 投影到128维

@@ -1,19 +1,20 @@
 import torch
+import os
+import datetime
 import numpy as np
-import pandas as pd
 import time
 import matplotlib.pyplot as plt
 import argparse
 from sklearn.metrics import precision_recall_curve, roc_curve, auc
 
 from inits import load_data1, preprocess_graph
-from model.Transorfomer import TransorfomerModel
+from model.TransHGCN import TransorfomerModel
 from hypergraph_construction import construct_H_with_KNN, generate_G_from_H
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 
 
-epochs = 700
-batch_size = 64
+epochs = 25000
+batch_size = 128
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--n_hid", type=int, default=128, help="dimension of hidden layer")
@@ -106,6 +107,7 @@ def main(device):
     model.train()
 
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+    
 
     # -------------------- 训练与验证 --------------------
     for epoch in range(epochs):
@@ -147,6 +149,7 @@ def main(device):
             )
 
         auc_val, aupr_val, _, _, _, _ = evaluate(validation_data, val_score)
+        
         t_elapsed = time.time() - t_start
         print(
             f"Epoch: {epoch:04d} | Train Loss: {loss.item():.5f} "
@@ -174,6 +177,18 @@ def main(device):
 
     return geneName, test_score, test_data
 
+def _init_log(log_path):
+    os.makedirs(os.path.dirname(log_path), exist_ok=True)
+    if not os.path.exists(log_path):
+        with open(log_path, "w", encoding="utf-8") as f:
+            # 写表头：时间戳, 随机种子, 外层轮次t, 折i, 运行秒数, AUC, AUPR
+            f.write("timestamp,seed,t,i,run_time,auc,aupr\n")
+
+def _append_log(log_path, seed, t, i, run_time, auc_val, aupr_val):
+    ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with open(log_path, "a", encoding="utf-8") as f:
+        f.write(f"{ts},{seed},{t},{i},{run_time:.6f},{auc_val:.6f},{aupr_val:.6f}\n")
+
 
 if __name__ == "__main__":
     seed = 123
@@ -183,20 +198,29 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Using device:", device)
 
-    T = 1
+    T = 5
     cv_num = 1
-    aupr_vec = []
+    auc_vec = []  # 用来记录每次的AUC值
+    aupr_vec = []  # 用来记录每次的AUPR值
     for t in range(T):
         for i in range(cv_num):
             t_start = time.time()
             geneName, pre_test_label, rel_test_label = main(device)
-            print("Run time: {:.4f}s".format(time.time() - t_start))
+            run_time = time.time() - t_start
+            print("Run time: {:.4f}s".format(run_time))
 
+            LOG_PATH = "trian_log.txt"
             auc_val, aupr_val, fpr, tpr, rec, prec = evaluate(
                 rel_test_label, pre_test_label
             )
+            auc_vec.append(auc_val)
             aupr_vec.append(aupr_val)
             print("auc: {:.6f}, aupr: {:.6f}".format(auc_val, aupr_val))
+
+            try:
+                _append_log(LOG_PATH, seed, t, i, run_time, auc_val, aupr_val)
+            except Exception as e:
+                print(f"[WARN] 写日志失败：{e}")
 
             # 画图（可选）
             plt.figure()
@@ -216,18 +240,3 @@ if __name__ == "__main__":
             plt.show()
 
 
-y_true = rel_test_label[:, 2]  # shape [n_samples]
-idx = rel_test_label[:, :2].astype(int)
-
-# 预测分数转成 0/1 标签，阈值默认 0.5
-y_score = pre_test_label[idx[:, 0], idx[:, 1]]
-y_pred = (y_score >= 0.5).astype(int)
-
-# 计算混淆矩阵
-cm = confusion_matrix(y_true, y_pred)
-
-# 可视化
-disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=[0, 1])
-disp.plot(cmap=plt.cm.Blues)
-plt.title("Confusion Matrix")
-plt.show()
