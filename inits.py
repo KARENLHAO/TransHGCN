@@ -26,7 +26,7 @@ def adj_to_bias(adj, sizes, nhood = 1):#输入参数包括邻接矩阵 adj、图
 
 
 def load_data1():
-    exp_file = "Data/mESC/TFs+1000/BL--ExpressionData.csv"  # .../
+    exp_file = 'Data/Benchmark Dataset/STRING Dataset/hESC/TFs+500/BL--ExpressionData.csv'  # .../
 
 
     data_input = pd.read_csv(exp_file, index_col=0)
@@ -38,9 +38,9 @@ def load_data1():
     
 
 
-    train_file = "Data/Train_validation_test/mESC 1000/Train_set.csv"  # .../Demo/
-    test_file = "Data/Train_validation_test/mESC 1000/Test_set.csv"
-    val_file = "Data/Train_validation_test/mESC 1000/Validation_set.csv"
+    train_file = 'Data/Train_validation_test/STRING/hESC 500/Train_set.csv'  # .../Demo/
+    test_file = 'Data/Train_validation_test/STRING/hESC 500/Test_set.csv'
+    val_file = 'Data/Train_validation_test/STRING/hESC 500/Validation_set.csv'
     train_data = pd.read_csv(train_file, index_col=0).values
     validation_data = pd.read_csv(val_file, index_col=0).values
     test_data = pd.read_csv(test_file, index_col=0).values

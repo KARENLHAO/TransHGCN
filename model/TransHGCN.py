@@ -3,9 +3,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from model.gcn import GraphConvolution
-from .scMHNN_model import HGNN_unsupervised
+from .HGNN import HGNN_unsupervised
 import numpy as np
-
 
 class MultiHeadAttention(nn.Module):
     def __init__(self, input_dim, n_heads, ouput_dim=None):
@@ -41,7 +40,6 @@ class MultiHeadAttention(nn.Module):
         output = self.fc(context)
         return output
 
-
 class EncoderLayer(nn.Module):
     def __init__(self, input_dim, n_heads):
         super(EncoderLayer, self).__init__()
@@ -53,21 +51,22 @@ class EncoderLayer(nn.Module):
 
     def forward(self, X):
         output = self.attn(X)
-        # X = self.AN1(output + X)
-        #
-        # output = self.l1(X)
-        # X = self.AN2(output + X)
+        X = self.AN1(output + X)
+        
+        output = self.l1(X)
+        X = self.AN2(output + X)
 
         return output
 
 
-class TransorfomerModel(nn.Module):
+
+class TransHGCNModel(nn.Module):
     def __init__(self, exp, do_train=False):
         """
         exp: 基因表达矩阵，需为 torch.Tensor，shape = [num_nodes, num_cells]
         do_train: 标记是否处于训练模式（此处仅做示例区分）
         """
-        super(TransorfomerModel, self).__init__()
+        super(TransHGCNModel, self).__init__()
         self.do_train = do_train
         self.num_nodes = exp.shape[0]
         self.num_cells = exp.shape[1]
@@ -77,12 +76,9 @@ class TransorfomerModel(nn.Module):
         self.scMHNN_model = HGNN_unsupervised(
             in_ch=self.num_cells, n_hid=128, dropout=0.1
         )
-        
+        self.fuse = nn.Linear(128 + 128, 128)   # 融合 HGNN + Transformer
         self.proj = nn.Linear(self.num_cells, 128)  # 把原始特征压到128维
-
-        self.fuse = nn.Sequential(
-            nn.Linear(128 + 128, 128), nn.ReLU(inplace=True)
-        )   # 融合 HGNN + Transformer
+        self.tau = 0.1  # 对比损失的温度参数
 
         self.adapt_for_gcn = nn.Linear(128, self.num_cells)
 
@@ -96,7 +92,7 @@ class TransorfomerModel(nn.Module):
 
 
         self.fes_encoder = EncoderLayer(128, 2)
-        self.tau = 0.1  # 对比损失的温度参数
+
 
     def forward(self, adj, G):
         # 1) 归一化 + 投影到128维
@@ -141,9 +137,9 @@ class TransorfomerModel(nn.Module):
         base_loss = torch.sqrt(torch.mean(error * mask))
 
         # 叠加对比损失
-        if triplet is not None:
-            x_ach, x_pos, x_neg = triplet
-            c_loss = self._contrastive_loss(x_ach, x_pos, x_neg)
-            return base_loss + lambda_contrast * c_loss, base_loss
-        else:
-            return base_loss, base_loss
+        # if triplet is not None:
+        #     x_ach, x_pos, x_neg = triplet
+        #     c_loss = self._contrastive_loss(x_ach, x_pos, x_neg)
+        #     return base_loss + lambda_contrast * c_loss, base_loss
+        # else:
+        return base_loss

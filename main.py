@@ -1,6 +1,4 @@
 import torch
-import os
-import datetime
 import numpy as np
 import time
 import matplotlib.pyplot as plt
@@ -8,13 +6,13 @@ import argparse
 from sklearn.metrics import precision_recall_curve, roc_curve, auc
 
 from inits import load_data1, preprocess_graph
-from model.TransHGCN import TransorfomerModel
+from model.TransHGCN import TransHGCNModel
 from hypergraph_construction import construct_H_with_KNN, generate_G_from_H
-from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 
 
-epochs = 25000
-batch_size = 128
+
+epochs = 800
+batch_size = 64
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--n_hid", type=int, default=128, help="dimension of hidden layer")
@@ -103,11 +101,10 @@ def main(device):
     neg_logits_validation = torch.FloatTensor(neg_logits_validation).to(device)
 
     # -------------------- 模型构建 --------------------
-    model = TransorfomerModel(G, do_train=True).to(device)
+    model = TransHGCNModel(feature, do_train=True).to(device)
     model.train()
 
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
-    
 
     # -------------------- 训练与验证 --------------------
     for epoch in range(epochs):
@@ -118,7 +115,7 @@ def main(device):
         logits, triplet = model(adj, G)
 
         # === 融合损失：重构(base) + 对比 ===
-        loss, base_loss = model.loss_func(
+        loss= model.loss_func(
             logits,
             lbl_in=logits_train,
             msk_in=train_mask.float(),
@@ -137,7 +134,7 @@ def main(device):
         model.eval()
         with torch.no_grad():
             val_logits, _ = model(adj, G)
-            val_loss, _ = model.loss_func(
+            val_loss = model.loss_func(
                 val_logits,
                 lbl_in=logits_validation,
                 msk_in=validation_mask.float(),
@@ -149,11 +146,10 @@ def main(device):
             )
 
         auc_val, aupr_val, _, _, _, _ = evaluate(validation_data, val_score)
-        
         t_elapsed = time.time() - t_start
         print(
             f"Epoch: {epoch:04d} | Train Loss: {loss.item():.5f} "
-            f"(base {base_loss.item():.5f}) | Val Loss: {val_loss.item():.5f} "
+            f" Val Loss: {val_loss.item():.5f} "
             f"| AUC: {auc_val:.5f} | AUPR: {aupr_val:.5f} | Time: {t_elapsed:.5f}s"
         )
         model.train()
@@ -165,7 +161,7 @@ def main(device):
     with torch.no_grad():
         test_logits, _ = model(adj, G)
         # 如需保持和旧代码一致的指标，也可用 masked_accuracy：
-        test_loss, _ = model.loss_func(
+        test_loss= model.loss_func(
             test_logits,
             lbl_in=logits_test,
             msk_in=test_mask.float(),
@@ -175,19 +171,7 @@ def main(device):
         test_score = test_logits.view(feature.shape[0], feature.shape[0]).cpu().numpy()
     print("Test Loss: {:.5f}".format(test_loss.item()))
 
-    return geneName, test_score, test_data
-
-def _init_log(log_path):
-    os.makedirs(os.path.dirname(log_path), exist_ok=True)
-    if not os.path.exists(log_path):
-        with open(log_path, "w", encoding="utf-8") as f:
-            # 写表头：时间戳, 随机种子, 外层轮次t, 折i, 运行秒数, AUC, AUPR
-            f.write("timestamp,seed,t,i,run_time,auc,aupr\n")
-
-def _append_log(log_path, seed, t, i, run_time, auc_val, aupr_val):
-    ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    with open(log_path, "a", encoding="utf-8") as f:
-        f.write(f"{ts},{seed},{t},{i},{run_time:.6f},{auc_val:.6f},{aupr_val:.6f}\n")
+    return geneName, test_score, test_data, test_loss
 
 
 if __name__ == "__main__":
@@ -198,45 +182,73 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Using device:", device)
 
-    T = 5
-    cv_num = 1
-    auc_vec = []  # 用来记录每次的AUC值
-    aupr_vec = []  # 用来记录每次的AUPR值
-    for t in range(T):
-        for i in range(cv_num):
-            t_start = time.time()
-            geneName, pre_test_label, rel_test_label = main(device)
-            run_time = time.time() - t_start
-            print("Run time: {:.4f}s".format(run_time))
-
-            LOG_PATH = "trian_log.txt"
-            auc_val, aupr_val, fpr, tpr, rec, prec = evaluate(
-                rel_test_label, pre_test_label
-            )
-            auc_vec.append(auc_val)
-            aupr_vec.append(aupr_val)
-            print("auc: {:.6f}, aupr: {:.6f}".format(auc_val, aupr_val))
-
-            try:
-                _append_log(LOG_PATH, seed, t, i, run_time, auc_val, aupr_val)
-            except Exception as e:
-                print(f"[WARN] 写日志失败：{e}")
-
-            # 画图（可选）
-            plt.figure()
-            plt.plot(fpr, tpr, label="ROC (AUC = {:.4f})".format(auc_val))
-            plt.xlabel("False Positive Rate")
-            plt.ylabel("True Positive Rate")
-            plt.title("ROC Curve")
-            plt.legend()
-            plt.show()
-
-            plt.figure()
-            plt.plot(rec, prec, label="PR (AUPR = {:.4f})".format(aupr_val))
-            plt.xlabel("Recall")
-            plt.ylabel("Precision")
-            plt.title("Precision-Recall Curve")
-            plt.legend()
-            plt.show()
+    # 在循环外先准备容器
+roc_list = []  # 每个元素: {"fpr":..., "tpr":..., "auc":..., "label":...}
+pr_list = []  # 每个元素: {"rec":..., "prec":..., "aupr":..., "label":...}
 
 
+T = 1
+cv_num = 1
+auc_vec = []
+aupr_vec = []
+
+for t in range(T):
+    for i in range(cv_num):
+        t_start = time.time()
+        geneName, pre_test_label, rel_test_label, test_loss = main(device)
+        run_time = time.time() - t_start
+        print("Run time: {:.4f}s".format(run_time))
+
+        auc_val, aupr_val, fpr, tpr, rec, prec = evaluate(
+            rel_test_label, pre_test_label
+        )
+        auc_vec.append(auc_val)
+        aupr_vec.append(aupr_val)
+        print("auc: {:.6f}, aupr: {:.6f}".format(auc_val, aupr_val))
+
+        
+
+        # 保存当前 run 的曲线与数值，便于统一绘图
+        run_id = t * cv_num + i + 1
+        roc_list.append(
+            {"fpr": fpr, "tpr": tpr, "auc": auc_val, "label": f"Run {run_id}"}
+        )
+        pr_list.append(
+            {"rec": rec, "prec": prec, "aupr": aupr_val, "label": f"Run {run_id}"}
+        )
+
+
+# ====== 统一绘图：ROC ======
+plt.figure(figsize=(8, 6))
+for item in roc_list:
+    plt.plot(
+        item["fpr"],
+        item["tpr"],
+        lw=1.8,
+        label=f"{item['label']} (AUC={item['auc']:.6f})",
+    )
+# 参考线
+plt.plot([0, 1], [0, 1], "--", lw=1, color="gray")
+plt.xlabel("False Positive Rate")
+plt.ylabel("True Positive Rate")
+plt.title("AUROC")
+plt.legend()
+plt.tight_layout()
+plt.savefig("/workspaces/GNNLink-master/image/baseline_AUROC.png", dpi=200)
+
+# ====== 统一绘图：PR ======
+plt.figure(figsize=(8, 6))
+for item in pr_list:
+    plt.plot(
+        item["rec"],
+        item["prec"],
+        lw=1.8,
+        label=f"{item['label']} (AUPR={item['aupr']:.6f})",
+    )
+plt.xlabel("Recall")
+plt.ylabel("Precision")
+plt.title("AUPRC")
+plt.legend()
+plt.tight_layout()
+plt.savefig("/workspaces/GNNLink-master/image/baseline_AUPRC.png", dpi=200)
+plt.show()
