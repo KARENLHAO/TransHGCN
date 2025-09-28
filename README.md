@@ -4,12 +4,13 @@ The model integrates **hypergraph topology learning** and **attention mechanisms
 
 ## Dependencies
 
-- Python == 3.8 
-- Pytorch == 1.6.0
-- scikit-learn==1.0.2
-- numpy==1.20.3
-- scanpy==1.7.2
-- gseapy==0.10.8
+- Python == 3.10 
+- Pytorch == 2.8.0+cu126
+- scikit-learn==1.7.2
+- numpy==2.1.2
+- pandas=2.3.2
+- scipy==1.15.3
+
 
 ## DATASET:
 [https://drive.google.com/file/d/1tthOy2v-GfVBlR9xUdyqZVBqqvOgnZlX/view?usp=drive_link](https://drive.google.com/file/d/1tthOy2v-GfVBlR9xUdyqZVBqqvOgnZlX/view?usp=drive_link)
