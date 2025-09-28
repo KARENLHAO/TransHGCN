@@ -1,6 +1,6 @@
-## Graph attention network for link prediction of gene regulations from single cell RNA-sequencing data
-
-![](https://github.com/zpliulab/GENELink/blob/main/Figure/Framework.jpg)
+## TransHGCN: Inferring Gene Regulatory Networks from Single-Cell RNA-seq by Combining Transformer and Hypergraph
+This repository contains the implementation of **TransHGCN**, a hypergraph convolutional network with transformer layers for **gene regulatory network (GRN)** inference using **single-cell RNA-seq (scRNA-seq)** data.  
+The model integrates **hypergraph topology learning** and **attention mechanisms** to capture high-order gene–gene interactions and improve cell-type annotation accuracy.
 
 ## Dependencies
 
