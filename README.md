@@ -13,7 +13,7 @@ The model integrates **hypergraph topology learning** and **attention mechanisms
 
 
 ## DATASET:
-### Table 1 Statistical data of single-cell transcriptomics dataset and 4 networks consisting of TFs and 500 (1000) most variable genes
+### Table | Statistical data of single-cell transcriptomics dataset and 4 networks consisting of TFs and 500 (1000) most variable genes
 
 **STRING & Non-specific CHIP-seq**
 
