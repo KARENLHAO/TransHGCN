@@ -13,12 +13,11 @@ The model integrates **hypergraph topology learning** and **attention mechanisms
 
 
 ## DATASET:
-# Table 1 Statistical data of single-cell transcriptomics dataset and 4 networks consisting of TFs and 500 (1000) most variable genes
+### Table 1 Statistical data of single-cell transcriptomics dataset and 4 networks consisting of TFs and 500 (1000) most variable genes
 
+**STRING & Non-specific CHIP-seq**
 
-|------------|----------|--------------|----------------|------------------|----------------|------------------|---------------------|
-|                                        STRING                            |               Non-specific CHIP-seq                     |
-| 细胞类型   | 细胞数量 | TFs (STRING) | Genes (STRING) | Density (STRING) | TFs (CHIP-seq) | Genes (CHIP-seq) | Density (CHIP-seq)  |
+| 细胞类型   | 细胞数量 | TFs (STRING) | Genes (STRING) | Density (STRING) | TFs (CHIP-seq) | Genes (CHIP-seq) | Density (CHIP-seq) |
 |------------|----------|--------------|----------------|------------------|----------------|------------------|---------------------|
 | hESC       | 759      | 343 (351)    | 511 (695)      | 0.024 (0.021)    | 283 (292)      | 753 (1138)       | 0.016 (0.014)       |
 | hHEP       | 426      | 409 (414)    | 646 (874)      | 0.028 (0.024)    | 322 (332)      | 825 (1217)       | 0.015 (0.013)       |
@@ -30,8 +29,8 @@ The model integrates **hypergraph topology learning** and **attention mechanisms
 
 ---
 
-|------------|----------|--------------|----------------|------------------|----------------|------------------|---------------------|
-|                        Cell-type-specific ChIP-seq                             |               Non-specific CHIP-seq                 |            
+**Cell-type-specific ChIP-seq & LOF/GOF**
+
 | 细胞类型   | 细胞数量 | TFs (ChIP-seq) | Genes (ChIP-seq) | Density (ChIP-seq) | TFs (LOF/GOF) | Genes (LOF/GOF) | Density (LOF/GOF) |
 |------------|----------|----------------|------------------|---------------------|----------------|-----------------|-------------------|
 | hESC       | 759      | 34 (34)        | 815 (1260)       | 0.164 (0.165)       | -              | -               | -                 |
@@ -42,4 +41,5 @@ The model integrates **hypergraph topology learning** and **attention mechanisms
 | mHSC-GM    | 890      | 22 (23)        | 618 (1089)       | 0.543 (0.565)       | -              | -               | -                 |
 | mHSC-L     | 848      | 16 (16)        | 525 (640)        | 0.525 (0.507)       | -              | -               | -                 |
 
-[https://drive.google.com/file/d/1tthOy2v-GfVBlR9xUdyqZVBqqvOgnZlX/view?usp=drive_link](https://drive.google.com/file/d/1tthOy2v-GfVBlR9xUdyqZVBqqvOgnZlX/view?usp=drive_link)
+
+[DOWNLOAD](https://drive.google.com/file/d/1tthOy2v-GfVBlR9xUdyqZVBqqvOgnZlX/view?usp=drive_link)
