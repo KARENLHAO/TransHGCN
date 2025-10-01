@@ -17,7 +17,7 @@ The model integrates **hypergraph topology learning** and **attention mechanisms
 
 **STRING & Non-specific CHIP-seq**
 
-| 细胞类型   | 细胞数量 | TFs (STRING) | Genes (STRING) | Density (STRING) | TFs (CHIP-seq) | Genes (CHIP-seq) | Density (CHIP-seq) |
+|cell type   | cells | TFs (STRING) | Genes (STRING) | Density (STRING) | TFs (CHIP-seq) | Genes (CHIP-seq) | Density (CHIP-seq) |
 |------------|----------|--------------|----------------|------------------|----------------|------------------|---------------------|
 | hESC       | 759      | 343 (351)    | 511 (695)      | 0.024 (0.021)    | 283 (292)      | 753 (1138)       | 0.016 (0.014)       |
 | hHEP       | 426      | 409 (414)    | 646 (874)      | 0.028 (0.024)    | 322 (332)      | 825 (1217)       | 0.015 (0.013)       |
@@ -31,7 +31,7 @@ The model integrates **hypergraph topology learning** and **attention mechanisms
 
 **Cell-type-specific ChIP-seq & LOF/GOF**
 
-| 细胞类型   | 细胞数量 | TFs (ChIP-seq) | Genes (ChIP-seq) | Density (ChIP-seq) | TFs (LOF/GOF) | Genes (LOF/GOF) | Density (LOF/GOF) |
+|cell type   | cells | TFs (ChIP-seq) | Genes (ChIP-seq) | Density (ChIP-seq) | TFs (LOF/GOF) | Genes (LOF/GOF) | Density (LOF/GOF) |
 |------------|----------|----------------|------------------|---------------------|----------------|-----------------|-------------------|
 | hESC       | 759      | 34 (34)        | 815 (1260)       | 0.164 (0.165)       | -              | -               | -                 |
 | hHEP       | 426      | 30 (31)        | 874 (1331)       | 0.379 (0.377)       | -              | -               | -                 |
