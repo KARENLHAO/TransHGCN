@@ -13,4 +13,32 @@ The model integrates **hypergraph topology learning** and **attention mechanisms
 
 
 ## DATASET:
+# Table 1 Statistical data of single-cell transcriptomics dataset and 4 networks consisting of TFs and 500 (1000) most variable genes
+
+### STRING & Non-specific CHIP-seq
+
+| 细胞类型   | 细胞数量 | TFs (STRING) | Genes (STRING) | Density (STRING) | TFs (CHIP-seq) | Genes (CHIP-seq) | Density (CHIP-seq) |
+|------------|----------|--------------|----------------|------------------|----------------|------------------|---------------------|
+| hESC       | 759      | 343 (351)    | 511 (695)      | 0.024 (0.021)    | 283 (292)      | 753 (1138)       | 0.016 (0.014)       |
+| hHEP       | 426      | 409 (414)    | 646 (874)      | 0.028 (0.024)    | 322 (332)      | 825 (1217)       | 0.015 (0.013)       |
+| mDC        | 384      | 264 (273)    | 479 (664)      | 0.038 (0.032)    | 250 (254)      | 634 (969)        | 0.019 (0.016)       |
+| mESC       | 422      | 495 (499)    | 638 (785)      | 0.024 (0.021)    | 516 (522)      | 890 (1214)       | 0.015 (0.013)       |
+| mHSC-E     | 1072     | 156 (161)    | 291 (413)      | 0.029 (0.027)    | 144 (147)      | 442 (674)        | 0.017 (0.013)       |
+| mHSC-GM    | 890      | 92 (100)     | 201 (344)      | 0.040 (0.037)    | 82 (88)        | 297 (526)        | 0.030 (0.029)       |
+| mHSC-L     | 848      | 39 (40)      | 70 (81)        | 0.048 (0.045)    | 35 (37)        | 164 (192)        | 0.048 (0.043)       |
+
+---
+
+### Cell-type-specific ChIP-seq & LOF/GOF
+
+| 细胞类型   | 细胞数量 | TFs (ChIP-seq) | Genes (ChIP-seq) | Density (ChIP-seq) | TFs (LOF/GOF) | Genes (LOF/GOF) | Density (LOF/GOF) |
+|------------|----------|----------------|------------------|---------------------|----------------|-----------------|-------------------|
+| hESC       | 759      | 34 (34)        | 815 (1260)       | 0.164 (0.165)       | -              | -               | -                 |
+| hHEP       | 426      | 30 (31)        | 874 (1331)       | 0.379 (0.377)       | -              | -               | -                 |
+| mDC        | 384      | 20 (21)        | 443 (684)        | 0.085 (0.082)       | -              | -               | -                 |
+| mESC       | 422      | 88 (89)        | 977 (1385)       | 0.345 (0.347)       | 34 (34)        | 774 (1098)      | 0.158 (0.154)     |
+| mHSC-E     | 1072     | 29 (33)        | 691 (1177)       | 0.578 (0.566)       | -              | -               | -                 |
+| mHSC-GM    | 890      | 22 (23)        | 618 (1089)       | 0.543 (0.565)       | -              | -               | -                 |
+| mHSC-L     | 848      | 16 (16)        | 525 (640)        | 0.525 (0.507)       | -              | -               | -                 |
+
 [https://drive.google.com/file/d/1tthOy2v-GfVBlR9xUdyqZVBqqvOgnZlX/view?usp=drive_link](https://drive.google.com/file/d/1tthOy2v-GfVBlR9xUdyqZVBqqvOgnZlX/view?usp=drive_link)
