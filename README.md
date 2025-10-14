@@ -1,7 +1,7 @@
 ## TransHGCN: Inferring Gene Regulatory Networks from Single-Cell RNA-seq by Combining Transformer and Hypergraph
-This repository contains the implementation of **TransHGCN**, a hypergraph convolutional network with transformer layers for **gene regulatory network (GRN)** inference using **single-cell RNA-seq (scRNA-seq)** data.  
-The model integrates **hypergraph topology learning** and **attention mechanisms** to capture high-order gene–gene interactions and improve cell-type annotation accuracy.
+This repository contains the implementation of **TransHGCN**, a hypergraph convolutional network with transformer layers for **gene regulatory network (GRN)** inference using **single-cell RNA-seq (scRNA-seq)** data. The model integrates **hypergraph topology learning** and **attention mechanisms** to capture high-order gene–gene interactions and improve cell-type annotation accuracy.
 
+![alt text](image/TransHGCN.png)
 ## Dependencies
 
 - Python == 3.10 
@@ -12,7 +12,7 @@ The model integrates **hypergraph topology learning** and **attention mechanisms
 - scipy==1.15.3
 
 
-## DATASET:
+## Dataset:  
 ### Table | Statistical data of single-cell transcriptomics dataset and 4 networks consisting of TFs and 500 (1000) most variable genes
 
 **STRING & Non-specific CHIP-seq**
