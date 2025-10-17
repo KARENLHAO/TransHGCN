@@ -112,7 +112,7 @@ def main(device):
         optimizer.zero_grad()
 
         # === 前向：现在返回 logits 和对比三元组 ===
-        logits, triplet = model(adj, G)
+        logits= model(adj, G)
 
         # === 融合损失：重构(base) + 对比 ===
         loss= model.loss_func(
@@ -120,7 +120,7 @@ def main(device):
             lbl_in=logits_train,
             msk_in=train_mask.float(),
             neg_msk=neg_logits_train,
-            triplet=triplet,
+            triplet=None,
             lambda_contrast=0.2,
         )
         loss.backward()
@@ -133,7 +133,7 @@ def main(device):
         # 验证
         model.eval()
         with torch.no_grad():
-            val_logits, _ = model(adj, G)
+            val_logits = model(adj, G)
             val_loss = model.loss_func(
                 val_logits,
                 lbl_in=logits_validation,
@@ -159,7 +159,7 @@ def main(device):
     # -------------------- 测试 --------------------
     model.eval()
     with torch.no_grad():
-        test_logits, _ = model(adj, G)
+        test_logits = model(adj, G)
         # 如需保持和旧代码一致的指标，也可用 masked_accuracy：
         test_loss= model.loss_func(
             test_logits,
